@@ -6,7 +6,7 @@ from env import Env
 from models import Actor, Critic
 
 
-max_steps, update_start, update_interval, batch_size, discount, polyak_rate = 100000, 1000, 4, 16, 0.99, 0.995
+max_steps, update_start, update_interval, batch_size, discount, polyak_rate = 100000, 5000, 4, 128, 0.99, 0.995
 env = Env()
 actor = Actor()
 critic = Critic()
@@ -26,8 +26,12 @@ D = deque(maxlen=10000)
 state, done, total_reward = env.reset(), False, 0
 for step in range(1, max_steps + 1):
   with torch.no_grad():
-    # Observer state s and select action a = clip(μ(s) + ε, a_low, a_high)
-    action = torch.clamp(actor(state) + torch.randn(1, 1), min=-2, max=2)
+    if step < update_start:
+      # To improve exploration take actions sampled from a uniform random distribution over actions at the start of training
+      action = torch.tensor([[2 * random.random() - 1]])
+    else:
+      # Observe state s and select action a = clip(μ(s) + ε, a_low, a_high)
+      action = torch.clamp(actor(state) + 0.1 * torch.randn(1, 1), min=-1, max=1)
     # Execute a in the environment and observe next state s', reward r, and done signal d to indicate whether s' is terminal
     next_state, reward, done = env.step(action)
     total_reward += reward
