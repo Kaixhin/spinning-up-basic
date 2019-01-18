@@ -4,27 +4,29 @@ from env import Env
 from models import ActorCritic
 
 
-epochs, batch_size, discount, trace_decay = 100, 16, 0.99, 0.97
+max_steps, batch_size, discount, trace_decay = 100000, 16, 0.99, 0.97
+env = Env()
 agent = ActorCritic()
 actor_optimiser = optim.Adam(agent.actor.parameters())
 critic_optimiser = optim.Adam(agent.critic.parameters())
-env = Env()
 
 
-for epoch in range(epochs):
-  total_reward = 0
+step = 0
+while step < max_steps:
   # Collect set of trajectories D by running policy π in the environment
   D = [[]] * batch_size
   for idx in range(batch_size):
-    state, done = env.reset(), False
+    state, done, total_reward = env.reset(), False, 0
     while not done:
       policy, value = agent(state)
       action = policy.rsample()
       log_prob_action = policy.log_prob(action)
       next_state, reward, done = env.step(action)
+      step += 1
       total_reward += reward
       D[idx].append({'state': state, 'action': action, 'reward': reward, 'log_prob_action': log_prob_action, 'value': value})
       state = next_state
+    print('Step:', step, 'Reward:', total_reward)
 
   # Compute rewards-to-go R and advantage estimates based on the current value function V
   for idx in range(batch_size):
@@ -54,5 +56,3 @@ for epoch in range(epochs):
   critic_optimiser.zero_grad()
   value_loss.backward()
   critic_optimiser.step()
-
-  print(epoch, total_reward / batch_size)
