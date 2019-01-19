@@ -9,9 +9,10 @@ class ActorCritic(nn.Module):
     super().__init__()
     self.actor = nn.Sequential(nn.Linear(3, 128), nn.Tanh(), nn.Linear(128, 128), nn.Tanh(), nn.Linear(128, 1))
     self.critic = nn.Sequential(nn.Linear(3, 128), nn.Tanh(), nn.Linear(128, 128), nn.Tanh(), nn.Linear(128, 1))
+    self.policy_log_std = nn.Parameter(torch.tensor([[-0.5]]))
 
   def forward(self, state):
-    policy = Normal(self.actor(state), torch.ones(state.size(0), 1))
+    policy = Normal(self.actor(state), self.policy_log_std.exp())
     value = self.critic(state).squeeze(dim=1)
     return policy, value
 
