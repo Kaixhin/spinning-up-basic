@@ -14,6 +14,17 @@ class Actor(nn.Module):
     return policy
 
 
+class TanhNormal(Normal):
+  def rsample(self):
+    return torch.tanh(self.loc + self.scale * torch.randn_like(self.scale))
+
+  def sample(self):
+    return self.rsample().detach()
+
+  def log_prob(self, value):
+    return super().log_prob(torch.atan(value)) - torch.log(1 - value.pow(2) + 1e-6) 
+
+
 class SoftActor(nn.Module):
   def __init__(self):
     super().__init__()
@@ -21,7 +32,7 @@ class SoftActor(nn.Module):
 
   def forward(self, state):
     policy_mean, policy_log_std = self.actor(state).chunk(2, dim=1)
-    policy = Normal(policy_mean, policy_log_std.exp())
+    policy = TanhNormal(policy_mean, policy_log_std.exp())
     return policy
 
 
