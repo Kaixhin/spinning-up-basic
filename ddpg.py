@@ -2,6 +2,7 @@ from collections import deque
 import random
 import torch
 from torch import optim
+from tqdm import tqdm
 from env import Env
 from models import Actor, Critic, create_target_network, update_target_network
 
@@ -18,7 +19,8 @@ D = deque(maxlen=10000)
 
 
 state, done, total_reward = env.reset(), False, 0
-for step in range(1, max_steps + 1):
+pbar = tqdm(range(1, max_steps + 1), unit_scale=1, smoothing=0)
+for step in pbar:
   with torch.no_grad():
     if step < update_start:
       # To improve exploration take actions sampled from a uniform random distribution over actions at the start of training
@@ -33,7 +35,7 @@ for step in range(1, max_steps + 1):
     D.append({'state': state, 'action': action, 'reward': torch.tensor([reward]), 'next_state': next_state, 'done': torch.tensor([done], dtype=torch.float32)})
     # If s' is terminal, reset environment state
     if done:
-      print('Step:', step, 'Reward:', total_reward)
+      pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
       state, total_reward = env.reset(), 0
 
   if step > update_start and step % update_interval == 0:

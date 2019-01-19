@@ -1,5 +1,6 @@
 import torch
 from torch import optim
+from tqdm import tqdm
 from env import Env
 from models import ActorCritic
 
@@ -11,7 +12,7 @@ actor_optimiser = optim.Adam(agent.actor.parameters())
 critic_optimiser = optim.Adam(agent.critic.parameters())
 
 
-step = 0
+step, pbar = 0, tqdm(total=max_steps, smoothing=0)
 while step < max_steps:
   # Collect set of trajectories D by running policy π in the environment
   D = [[]] * batch_size
@@ -23,10 +24,11 @@ while step < max_steps:
       log_prob_action = policy.log_prob(action)
       next_state, reward, done = env.step(action)
       step += 1
+      pbar.update(1)
       total_reward += reward
       D[idx].append({'state': state, 'action': action, 'reward': reward, 'log_prob_action': log_prob_action, 'old_log_prob_action': log_prob_action.detach(), 'value': value})
       state = next_state
-    print('Step:', step, 'Reward:', total_reward)
+    pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
 
   # Compute rewards-to-go R and advantage estimates based on the current value function V
   for idx in range(batch_size):
@@ -65,3 +67,5 @@ while step < max_steps:
     critic_optimiser.zero_grad()
     value_loss.backward()
     critic_optimiser.step()
+
+pbar.close()
