@@ -1,3 +1,4 @@
+import copy
 import torch
 from torch import nn
 from torch.distributions import Normal
@@ -33,3 +34,15 @@ class Critic(nn.Module):
   def forward(self, state, action):
     value = self.critic(torch.cat([state, action], dim=1))
     return value
+
+
+def create_target_network(network):
+  target_network = copy.deepcopy(network)
+  for param in target_network.parameters():
+    param.requires_grad = False
+  return target_network
+
+
+def update_target_network(network, target_network, polyak_rate):
+  for param, target_param in zip(network.parameters(), target_network.parameters()):
+    target_param.data = polyak_rate * target_param.data + (1 - polyak_rate) * param.data

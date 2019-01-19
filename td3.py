@@ -3,7 +3,7 @@ import random
 import torch
 from torch import optim
 from env import Env
-from models import Actor, Critic
+from models import Actor, Critic, create_target_network, update_target_network
 
 
 max_steps, update_start, update_interval, batch_size, discount, policy_delay, polyak_rate = 100000, 5000, 4, 128, 0.99, 2, 0.995
@@ -11,18 +11,9 @@ env = Env()
 actor = Actor()
 critic_1 = Critic()
 critic_2 = Critic()
-target_actor = Actor()
-target_actor.load_state_dict(actor.state_dict())
-for param in target_actor.parameters():
-  param.requires_grad = False
-target_critic_1 = Critic()
-target_critic_1.load_state_dict(critic_1.state_dict())
-for param in target_critic_1.parameters():
-  param.requires_grad = False
-target_critic_2 = Critic()
-target_critic_2.load_state_dict(critic_2.state_dict())
-for param in target_critic_2.parameters():
-  param.requires_grad = False
+target_actor = create_target_network(actor)
+target_critic_1 = create_target_network(critic_1)
+target_critic_2 = create_target_network(critic_2)
 actor_optimiser = optim.Adam(actor.parameters())
 critics_optimiser = optim.Adam(list(critic_1.parameters()) + list(critic_2.parameters()))
 D = deque(maxlen=10000)
@@ -71,9 +62,6 @@ for step in range(1, max_steps + 1):
       actor_optimiser.step()
 
     # Update target networks
-    for param, target_param in zip(critic_1.parameters(), target_critic_1.parameters()):
-      target_param.data = polyak_rate * target_param.data + (1 - polyak_rate) * param.data
-    for param, target_param in zip(critic_2.parameters(), target_critic_2.parameters()):
-      target_param.data = polyak_rate * target_param.data + (1 - polyak_rate) * param.data
-    for param, target_param in zip(actor.parameters(), target_actor.parameters()):
-      target_param.data = polyak_rate * target_param.data + (1 - polyak_rate) * param.data
+    update_target_network(critic_1, target_critic_1, polyak_rate)
+    update_target_network(critic_2, target_critic_2, polyak_rate)
+    update_target_network(actor, target_actor, polyak_rate)

@@ -3,21 +3,15 @@ import random
 import torch
 from torch import optim
 from env import Env
-from models import Actor, Critic
+from models import Actor, Critic, create_target_network, update_target_network
 
 
 max_steps, update_start, update_interval, batch_size, discount, polyak_rate = 100000, 5000, 4, 128, 0.99, 0.995
 env = Env()
 actor = Actor()
 critic = Critic()
-target_actor = Actor()
-target_actor.load_state_dict(actor.state_dict())
-for param in target_actor.parameters():
-  param.requires_grad = False
-target_critic = Critic()
-target_critic.load_state_dict(critic.state_dict())
-for param in target_critic.parameters():
-  param.requires_grad = False
+target_actor = create_target_network(actor)
+target_critic = create_target_network(critic)
 actor_optimiser = optim.Adam(actor.parameters())
 critic_optimiser = optim.Adam(critic.parameters())
 D = deque(maxlen=10000)
@@ -63,7 +57,5 @@ for step in range(1, max_steps + 1):
     actor_optimiser.step()
 
     # Update target networks
-    for param, target_param in zip(critic.parameters(), target_critic.parameters()):
-      target_param.data = polyak_rate * target_param.data + (1 - polyak_rate) * param.data
-    for param, target_param in zip(actor.parameters(), target_actor.parameters()):
-      target_param.data = polyak_rate * target_param.data + (1 - polyak_rate) * param.data
+    update_target_network(critic, target_critic, polyak_rate)
+    update_target_network(actor, target_actor, polyak_rate)
