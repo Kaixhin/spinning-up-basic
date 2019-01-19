@@ -54,7 +54,7 @@ while step < max_steps:
     for idx in range(batch_size):
       for transition in D[idx]:
         policy_ratio = (transition['log_prob_action'] - transition['old_log_prob_action']).exp()
-        policy_loss -= torch.min(policy_ratio * transition['advantage'], torch.clamp(policy_ratio, min=1 - 0.2, max=1 + 0.2) * transition['advantage'])
+        policy_loss -= torch.min((policy_ratio * transition['advantage']).sum(dim=1), (torch.clamp(policy_ratio, min=1 - 0.2, max=1 + 0.2) * transition['advantage']).sum(dim=1))
     actor_optimiser.zero_grad()
     policy_loss.backward()
     actor_optimiser.step()

@@ -4,19 +4,19 @@ import torch
 from torch import optim
 from tqdm import tqdm
 from env import Env
-from models import Actor, Critic, create_target_network, update_target_network
+from models import Critic, SoftActor, create_target_network, update_target_network
 
 
-max_steps, update_start, update_interval, batch_size, discount, policy_delay, polyak_rate = 100000, 5000, 4, 128, 0.99, 2, 0.995
+max_steps, update_start, update_interval, batch_size, discount, alpha, polyak_rate = 100000, 5000, 4, 128, 0.99, 0.2, 0.995
 env = Env()
-actor = Actor()
+actor = SoftActor()
 critic_1 = Critic(state_action=True)
 critic_2 = Critic(state_action=True)
-target_actor = create_target_network(actor)
-target_critic_1 = create_target_network(critic_1)
-target_critic_2 = create_target_network(critic_2)
+value_critic = Critic()
+target_value_critic = create_target_network(value_critic)
 actor_optimiser = optim.Adam(actor.parameters())
 critics_optimiser = optim.Adam(list(critic_1.parameters()) + list(critic_2.parameters()))
+value_critic_optimiser = optim.Adam(value_critic.parameters())
 D = deque(maxlen=10000)
 
 
@@ -28,8 +28,8 @@ for step in pbar:
       # To improve exploration take actions sampled from a uniform random distribution over actions at the start of training
       action = torch.tensor([[2 * random.random() - 1]])
     else:
-      # Observe state s and select action a = clip(μ(s) + ε, a_low, a_high)
-      action = torch.clamp(actor(state) + 0.1 * torch.randn(1, 1), min=-1, max=1)
+      # Observe state s and select action a ~ μ(a|s)
+      action = actor(state).sample()
     # Execute a in the environment and observe next state s', reward r, and done signal d to indicate whether s' is terminal
     next_state, reward, done = env.step(action)
     total_reward += reward
@@ -45,25 +45,30 @@ for step in pbar:
     batch = random.sample(D, batch_size)
     batch = {k: torch.cat([d[k] for d in batch], dim=0) for k in batch[0].keys()}
 
-    # Compute target actions with clipped noise (target policy smoothing)
-    target_action = torch.clamp(target_actor(batch['next_state']) + torch.clamp(0.2 * torch.randn(1, 1), min=-0.5, max=0.5), min=-1, max=1)
-    # Compute targets (clipped double Q-learning)
-    y = batch['reward'] + discount * (1 - batch['done']) * torch.min(target_critic_1(batch['next_state'], target_action), target_critic_2(batch['next_state'], target_action))
+    # Compute targets for Q and V functions
+    y_q = batch['reward'] + discount * (1 - batch['done']) * target_value_critic(batch['next_state'])
+    policy = actor(batch['state'])
+    action = policy.rsample()  # a(s) is a sample from μ(·|s) which is differentiable wrt θ via the reparameterisation trick
+    weighted_sample_entropy = (alpha * policy.log_prob(action)).sum(dim=1)
+    y_v = torch.min(critic_1(batch['state'], action.detach()), critic_2(batch['state'], action.detach())) - weighted_sample_entropy.detach()
 
     # Update Q-functions by one step of gradient descent
-    value_loss = (critic_1(batch['state'], batch['action']) - y).pow(2).mean() + (critic_2(batch['state'], batch['action']) - y).pow(2).mean()
+    value_loss = (critic_1(batch['state'], batch['action']) - y_q).pow(2).mean() + (critic_2(batch['state'], batch['action']) - y_q).pow(2).mean()
     critics_optimiser.zero_grad()
     value_loss.backward()
     critics_optimiser.step()
 
-    if step % (policy_delay * update_interval) == 0:
-      # Update policy by one step of gradient ascent
-      policy_loss = -critic_1(batch['state'], actor(batch['state'])).mean()
-      actor_optimiser.zero_grad()
-      policy_loss.backward()
-      actor_optimiser.step()
+    # Update V-function by one step of gradient descent
+    value_loss = (value_critic(batch['state']) - y_v).pow(2).mean()
+    value_critic_optimiser.zero_grad()
+    value_loss.backward()
+    value_critic_optimiser.step()
 
-      # Update target networks
-      update_target_network(critic_1, target_critic_1, polyak_rate)
-      update_target_network(critic_2, target_critic_2, polyak_rate)
-      update_target_network(actor, target_actor, polyak_rate)
+    # Update policy by one step of gradient ascent
+    policy_loss = -(critic_1(batch['state'], action) + weighted_sample_entropy).mean()
+    actor_optimiser.zero_grad()
+    policy_loss.backward()
+    actor_optimiser.step()
+
+    # Update target value network
+    update_target_network(value_critic, target_value_critic, polyak_rate)

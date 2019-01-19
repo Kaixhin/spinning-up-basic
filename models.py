@@ -14,6 +14,17 @@ class Actor(nn.Module):
     return policy
 
 
+class SoftActor(nn.Module):
+  def __init__(self):
+    super().__init__()
+    self.actor = nn.Sequential(nn.Linear(3, 128), nn.Tanh(), nn.Linear(128, 128), nn.Tanh(), nn.Linear(128, 2))
+
+  def forward(self, state):
+    policy_mean, policy_log_std = self.actor(state).chunk(2, dim=1)
+    policy = Normal(policy_mean, policy_log_std.exp())
+    return policy
+
+
 class Critic(nn.Module):
   def __init__(self, state_action=False):
     super().__init__()
@@ -25,7 +36,7 @@ class Critic(nn.Module):
       value = self.critic(torch.cat([state, action], dim=1))
     else:
       value = self.critic(state)
-    return value
+    return value.squeeze(dim=1)
 
 
 class ActorCritic(nn.Module):
@@ -37,7 +48,7 @@ class ActorCritic(nn.Module):
 
   def forward(self, state):
     policy = Normal(self.actor(state), self.policy_log_std.exp())
-    value = self.critic(state).squeeze(dim=1)
+    value = self.critic(state)
     return policy, value
 
 

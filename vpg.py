@@ -45,7 +45,7 @@ while step < max_steps:
   policy_loss = 0
   for idx in range(batch_size):
     for transition in D[idx]:
-      policy_loss -= transition['log_prob_action'] * transition['advantage']
+      policy_loss -= (transition['log_prob_action'] * transition['advantage']).sum(dim=1)
   actor_optimiser.zero_grad()
   policy_loss.backward()
   actor_optimiser.step()
