@@ -4,19 +4,6 @@ from torch import nn
 from torch.distributions import Normal
 
 
-class ActorCritic(nn.Module):
-  def __init__(self):
-    super().__init__()
-    self.actor = nn.Sequential(nn.Linear(3, 128), nn.Tanh(), nn.Linear(128, 128), nn.Tanh(), nn.Linear(128, 1))
-    self.critic = nn.Sequential(nn.Linear(3, 128), nn.Tanh(), nn.Linear(128, 128), nn.Tanh(), nn.Linear(128, 1))
-    self.policy_log_std = nn.Parameter(torch.tensor([[-0.5]]))
-
-  def forward(self, state):
-    policy = Normal(self.actor(state), self.policy_log_std.exp())
-    value = self.critic(state).squeeze(dim=1)
-    return policy, value
-
-
 class Actor(nn.Module):
   def __init__(self):
     super().__init__()
@@ -28,13 +15,30 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
+  def __init__(self, state_action=False):
+    super().__init__()
+    self.state_action = state_action
+    self.critic = nn.Sequential(nn.Linear(3 + (1 if state_action else 0), 128), nn.Tanh(), nn.Linear(128, 128), nn.Tanh(), nn.Linear(128, 1))
+
+  def forward(self, state, action=None):
+    if self.state_action:
+      value = self.critic(torch.cat([state, action], dim=1))
+    else:
+      value = self.critic(state)
+    return value
+
+
+class ActorCritic(nn.Module):
   def __init__(self):
     super().__init__()
-    self.critic = nn.Sequential(nn.Linear(3 + 1, 128), nn.Tanh(), nn.Linear(128, 128), nn.Tanh(), nn.Linear(128, 1))
+    self.actor = Actor()
+    self.critic = Critic()
+    self.policy_log_std = nn.Parameter(torch.tensor([[-0.5]]))
 
-  def forward(self, state, action):
-    value = self.critic(torch.cat([state, action], dim=1))
-    return value
+  def forward(self, state):
+    policy = Normal(self.actor(state), self.policy_log_std.exp())
+    value = self.critic(state).squeeze(dim=1)
+    return policy, value
 
 
 def create_target_network(network):

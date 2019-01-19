@@ -10,7 +10,7 @@ from models import Actor, Critic, create_target_network, update_target_network
 max_steps, update_start, update_interval, batch_size, discount, polyak_rate = 100000, 5000, 4, 128, 0.99, 0.995
 env = Env()
 actor = Actor()
-critic = Critic()
+critic = Critic(state_action=True)
 target_actor = create_target_network(actor)
 target_critic = create_target_network(critic)
 actor_optimiser = optim.Adam(actor.parameters())

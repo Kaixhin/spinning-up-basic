@@ -10,8 +10,8 @@ from models import Actor, Critic, create_target_network, update_target_network
 max_steps, update_start, update_interval, batch_size, discount, policy_delay, polyak_rate = 100000, 5000, 4, 128, 0.99, 2, 0.995
 env = Env()
 actor = Actor()
-critic_1 = Critic()
-critic_2 = Critic()
+critic_1 = Critic(state_action=True)
+critic_2 = Critic(state_action=True)
 target_actor = create_target_network(actor)
 target_critic_1 = create_target_network(critic_1)
 target_critic_2 = create_target_network(critic_2)
