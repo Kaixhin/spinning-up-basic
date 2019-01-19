@@ -35,6 +35,7 @@ for step in pbar:
     total_reward += reward
     # Store (s, a, r, s', d) in replay buffer D
     D.append({'state': state, 'action': action, 'reward': torch.tensor([reward]), 'next_state': next_state, 'done': torch.tensor([done], dtype=torch.float32)})
+    state = next_state
     # If s' is terminal, reset environment state
     if done:
       pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))

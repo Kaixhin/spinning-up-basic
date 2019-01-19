@@ -26,13 +26,13 @@ while step < max_steps:
       step += 1
       pbar.update(1)
       total_reward += reward
-      D[idx].append({'state': state, 'action': action, 'reward': reward, 'log_prob_action': log_prob_action, 'old_log_prob_action': log_prob_action.detach(), 'value': value})
+      D[idx].append({'state': state, 'action': action, 'reward': torch.tensor([reward]), 'log_prob_action': log_prob_action, 'old_log_prob_action': log_prob_action.detach(), 'value': value})
       state = next_state
     pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
 
   # Compute rewards-to-go R and advantage estimates based on the current value function V
   for idx in range(batch_size):
-    reward_to_go, advantage, next_value = 0, 0, 0
+    reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([[0.]]), torch.tensor([0.])
     for transition in reversed(D[idx]):
       reward_to_go = transition['reward'] + discount * reward_to_go
       transition['reward_to_go'] = reward_to_go
@@ -40,32 +40,31 @@ while step < max_steps:
       advantage = advantage * discount * trace_decay + td_error
       transition['advantage'] = advantage
       next_value = transition['value'].detach()
+    # Extra step: turn trajectories into a batch for efficiency (valid for feedforward networks)
+    D[idx] = {k: torch.cat([transition[k] for transition in D[idx]], dim=0) for k in D[idx][0].keys()}
 
   for epoch in range(5):
     # Recalculate outputs for subsequent iterations
     if epoch > 0:
-      for idx in range(batch_size):
-        for transition in D[idx]:
-          policy, transition['value'] = agent(transition['state'])
-          transition['log_prob_action'] = policy.log_prob(transition['action'].detach())
+      for trajectory in D:
+        policy, trajectory['value'] = agent(trajectory['state'])
+        trajectory['log_prob_action'] = policy.log_prob(trajectory['action'].detach())
 
     # Update the policy by maximising the PPO-Clip objective
     policy_loss = 0
-    for idx in range(batch_size):
-      for transition in D[idx]:
-        policy_ratio = (transition['log_prob_action'] - transition['old_log_prob_action']).exp()
-        policy_loss -= torch.min((policy_ratio * transition['advantage']).sum(dim=1), (torch.clamp(policy_ratio, min=1 - 0.2, max=1 + 0.2) * transition['advantage']).sum(dim=1))
+    for trajectory in D:
+      policy_ratio = (trajectory['log_prob_action'] - trajectory['old_log_prob_action']).exp()
+      policy_loss -= torch.min((policy_ratio * trajectory['advantage']).sum(dim=1), (torch.clamp(policy_ratio, min=1 - 0.2, max=1 + 0.2) * trajectory['advantage']).sum(dim=1)).mean()
     actor_optimiser.zero_grad()
-    policy_loss.backward()
+    (policy_loss / batch_size).backward()
     actor_optimiser.step()
 
     # Fit value function by regression on mean-squared error
     value_loss = 0
-    for idx in range(batch_size):
-      for transition in D[idx]:
-        value_loss += (transition['value'] - transition['reward_to_go']).pow(2)
+    for trajectory in D:
+      value_loss += (trajectory['value'] - trajectory['reward_to_go']).pow(2).mean()
     critic_optimiser.zero_grad()
-    value_loss.backward()
+    (value_loss / batch_size).backward()
     critic_optimiser.step()
 
 pbar.close()
