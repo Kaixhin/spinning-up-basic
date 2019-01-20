@@ -5,6 +5,7 @@ from torch import optim
 from tqdm import tqdm
 from env import Env
 from models import Actor, Critic, create_target_network, update_target_network
+from utils import plot
 
 
 max_steps, update_start, update_interval, batch_size, discount, polyak_rate = 100000, 5000, 4, 128, 0.99, 0.995
@@ -37,6 +38,7 @@ for step in pbar:
     # If s' is terminal, reset environment state
     if done:
       pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
+      plot(step, total_reward, 'ddpg')
       state, total_reward = env.reset(), 0
 
   if step > update_start and step % update_interval == 0:

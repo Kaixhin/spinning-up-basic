@@ -3,6 +3,7 @@ from torch import optim
 from tqdm import tqdm
 from env import Env
 from models import ActorCritic
+from utils import plot
 
 
 max_steps, batch_size, discount, trace_decay = 100000, 16, 0.99, 0.97
@@ -29,6 +30,7 @@ while step < max_steps:
       D[idx].append({'state': state, 'action': action, 'reward': torch.tensor([reward]), 'log_prob_action': log_prob_action, 'old_log_prob_action': log_prob_action.detach(), 'value': value})
       state = next_state
     pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
+    plot(step, total_reward, 'ppo')
 
   # Compute rewards-to-go R and advantage estimates based on the current value function V
   for idx in range(batch_size):
