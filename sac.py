@@ -15,9 +15,9 @@ critic_1 = Critic(state_action=True)
 critic_2 = Critic(state_action=True)
 value_critic = Critic()
 target_value_critic = create_target_network(value_critic)
-actor_optimiser = optim.Adam(actor.parameters())
-critics_optimiser = optim.Adam(list(critic_1.parameters()) + list(critic_2.parameters()))
-value_critic_optimiser = optim.Adam(value_critic.parameters())
+actor_optimiser = optim.Adam(actor.parameters(), lr=1e-3)
+critics_optimiser = optim.Adam(list(critic_1.parameters()) + list(critic_2.parameters()), lr=1e-3)
+value_critic_optimiser = optim.Adam(value_critic.parameters(), lr=1e-3)
 D = deque(maxlen=10000)
 
 

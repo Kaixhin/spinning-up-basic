@@ -8,14 +8,14 @@ from models import Actor, Critic, create_target_network, update_target_network
 from utils import plot
 
 
-max_steps, update_start, update_interval, batch_size, discount, polyak_rate = 100000, 5000, 4, 128, 0.99, 0.995
+max_steps, update_start, update_interval, batch_size, discount, polyak_rate = 100000, 10000, 4, 128, 0.99, 0.995
 env = Env()
 actor = Actor()
 critic = Critic(state_action=True)
 target_actor = create_target_network(actor)
 target_critic = create_target_network(critic)
-actor_optimiser = optim.Adam(actor.parameters())
-critic_optimiser = optim.Adam(critic.parameters())
+actor_optimiser = optim.Adam(actor.parameters(), lr=1e-3)
+critic_optimiser = optim.Adam(critic.parameters(), lr=1e-3)
 D = deque(maxlen=10000)
 
 

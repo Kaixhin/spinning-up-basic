@@ -9,8 +9,8 @@ from utils import plot
 max_steps, batch_size, discount, trace_decay = 100000, 16, 0.99, 0.97
 env = Env()
 agent = ActorCritic()
-actor_optimiser = optim.Adam(agent.actor.parameters())
-critic_optimiser = optim.Adam(agent.critic.parameters())
+actor_optimiser = optim.Adam(list(agent.actor.parameters()) + [agent.policy_log_std], lr=3e-4)
+critic_optimiser = optim.Adam(agent.critic.parameters(), lr=1e-3)
 
 
 step, pbar = 0, tqdm(total=max_steps, smoothing=0)
@@ -21,7 +21,7 @@ while step < max_steps:
     state, done, total_reward = env.reset(), False, 0
     while not done:
       policy, value = agent(state)
-      action = policy.rsample()
+      action = policy.sample()
       log_prob_action = policy.log_prob(action)
       next_state, reward, done = env.step(action)
       step += 1
@@ -38,8 +38,8 @@ while step < max_steps:
     for transition in reversed(D[idx]):
       reward_to_go = transition['reward'] + discount * reward_to_go
       transition['reward_to_go'] = reward_to_go
-      td_error = transition['reward'] + discount * (next_value - transition['value'].detach())
-      advantage = advantage * discount * trace_decay + td_error
+      td_error = transition['reward'] + discount * next_value - transition['value'].detach()
+      advantage = td_error + discount * trace_decay * advantage
       transition['advantage'] = advantage
       next_value = transition['value'].detach()
     # Extra step: turn trajectories into a batch for efficiency (valid for feedforward networks)
