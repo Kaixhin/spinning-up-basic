@@ -22,7 +22,7 @@ class TanhNormal(Normal):
     return self.rsample().detach()
 
   def log_prob(self, value):
-    return super().log_prob(torch.atan(value)) - torch.log(1 - value.pow(2) + 1e-6) 
+    return super().log_prob(torch.atan(value)) - torch.log(1 - value.pow(2) + 1e-8) 
 
 
 class SoftActor(nn.Module):

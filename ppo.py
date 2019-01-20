@@ -9,8 +9,8 @@ from utils import plot
 max_steps, batch_size, discount, trace_decay = 100000, 16, 0.99, 0.97
 env = Env()
 agent = ActorCritic()
-actor_optimiser = optim.Adam(agent.actor.parameters())
-critic_optimiser = optim.Adam(agent.critic.parameters())
+actor_optimiser = optim.Adam(agent.actor.parameters(), lr=3e-4)
+critic_optimiser = optim.Adam(agent.critic.parameters(), lr=1e-3)
 
 
 step, pbar = 0, tqdm(total=max_steps, smoothing=0)
@@ -21,7 +21,7 @@ while step < max_steps:
     state, done, total_reward = env.reset(), False, 0
     while not done:
       policy, value = agent(state)
-      action = policy.rsample()
+      action = policy.sample()
       log_prob_action = policy.log_prob(action)
       next_state, reward, done = env.step(action)
       step += 1
