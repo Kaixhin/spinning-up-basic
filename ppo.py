@@ -9,7 +9,7 @@ from utils import plot
 max_steps, batch_size, discount, trace_decay = 100000, 16, 0.99, 0.97
 env = Env()
 agent = ActorCritic()
-actor_optimiser = optim.Adam(agent.actor.parameters(), lr=3e-4)
+actor_optimiser = optim.Adam(list(agent.actor.parameters()) + [agent.policy_log_std], lr=3e-4)
 critic_optimiser = optim.Adam(agent.critic.parameters(), lr=1e-3)
 
 
@@ -38,35 +38,31 @@ while step < max_steps:
     for transition in reversed(D[idx]):
       reward_to_go = transition['reward'] + discount * reward_to_go
       transition['reward_to_go'] = reward_to_go
-      td_error = transition['reward'] + discount * (next_value - transition['value'].detach())
-      advantage = advantage * discount * trace_decay + td_error
+      td_error = transition['reward'] + discount * next_value - transition['value'].detach()
+      advantage = td_error + discount * trace_decay * advantage
       transition['advantage'] = advantage
       next_value = transition['value'].detach()
-    # Extra step: turn trajectories into a batch for efficiency (valid for feedforward networks)
+    # Extra step: turn trajectories into a single batch for efficiency (valid for feedforward networks)
     D[idx] = {k: torch.cat([transition[k] for transition in D[idx]], dim=0) for k in D[idx][0].keys()}
+  trajectories = {k: torch.cat([trajectory[k] for trajectory in D], dim=0) for k in D[0].keys()}
 
   for epoch in range(5):
     # Recalculate outputs for subsequent iterations
     if epoch > 0:
-      for trajectory in D:
-        policy, trajectory['value'] = agent(trajectory['state'])
-        trajectory['log_prob_action'] = policy.log_prob(trajectory['action'].detach())
+      policy, trajectories['value'] = agent(trajectories['state'])
+      trajectories['log_prob_action'] = policy.log_prob(trajectories['action'].detach())
 
     # Update the policy by maximising the PPO-Clip objective
-    policy_loss = 0
-    for trajectory in D:
-      policy_ratio = (trajectory['log_prob_action'] - trajectory['old_log_prob_action']).exp()
-      policy_loss -= torch.min((policy_ratio * trajectory['advantage']).sum(dim=1), (torch.clamp(policy_ratio, min=1 - 0.2, max=1 + 0.2) * trajectory['advantage']).sum(dim=1)).mean()
+    policy_ratio = (trajectories['log_prob_action'] - trajectories['old_log_prob_action']).exp()
+    policy_loss = -torch.min((policy_ratio * trajectories['advantage']).sum(dim=1), (torch.clamp(policy_ratio, min=1 - 0.2, max=1 + 0.2) * trajectories['advantage']).sum(dim=1)).mean()
     actor_optimiser.zero_grad()
-    (policy_loss / batch_size).backward()
+    policy_loss.backward()
     actor_optimiser.step()
 
     # Fit value function by regression on mean-squared error
-    value_loss = 0
-    for trajectory in D:
-      value_loss += (trajectory['value'] - trajectory['reward_to_go']).pow(2).mean()
+    value_loss = (trajectories['value'] - trajectories['reward_to_go']).pow(2).mean()
     critic_optimiser.zero_grad()
-    (value_loss / batch_size).backward()
+    value_loss.backward()
     critic_optimiser.step()
 
 pbar.close()
