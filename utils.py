@@ -1,5 +1,6 @@
 import os
 import matplotlib.pyplot as plt
+from hyperparams import MAX_STEPS
 
 
 steps, rewards = [], []
@@ -12,5 +13,6 @@ def plot(step, reward, title):
   plt.title(title)
   plt.xlabel('Steps')
   plt.ylabel('Rewards')
+  plt.xlim((0, MAX_STEPS))
   plt.ylim((-2000, 0))
   plt.savefig(os.path.join('results', title + '.png'))

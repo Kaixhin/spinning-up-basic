@@ -5,9 +5,9 @@ from torch.distributions import Normal
 
 
 class Actor(nn.Module):
-  def __init__(self):
+  def __init__(self, hidden_size):
     super().__init__()
-    self.actor = nn.Sequential(nn.Linear(3, 128), nn.Tanh(), nn.Linear(128, 128), nn.Tanh(), nn.Linear(128, 1))
+    self.actor = nn.Sequential(nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 1))
 
   def forward(self, state):
     policy = self.actor(state)
@@ -26,9 +26,9 @@ class TanhNormal(Normal):
 
 
 class SoftActor(nn.Module):
-  def __init__(self):
+  def __init__(self, hidden_size):
     super().__init__()
-    self.actor = nn.Sequential(nn.Linear(3, 128), nn.Tanh(), nn.Linear(128, 128), nn.Tanh(), nn.Linear(128, 2))
+    self.actor = nn.Sequential(nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 2))
 
   def forward(self, state):
     policy_mean, policy_log_std = self.actor(state).chunk(2, dim=1)
@@ -37,10 +37,10 @@ class SoftActor(nn.Module):
 
 
 class Critic(nn.Module):
-  def __init__(self, state_action=False):
+  def __init__(self, hidden_size, state_action=False):
     super().__init__()
     self.state_action = state_action
-    self.critic = nn.Sequential(nn.Linear(3 + (1 if state_action else 0), 128), nn.Tanh(), nn.Linear(128, 128), nn.Tanh(), nn.Linear(128, 1))
+    self.critic = nn.Sequential(nn.Linear(3 + (1 if state_action else 0), hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 1))
 
   def forward(self, state, action=None):
     if self.state_action:
@@ -51,10 +51,10 @@ class Critic(nn.Module):
 
 
 class ActorCritic(nn.Module):
-  def __init__(self):
+  def __init__(self, hidden_size):
     super().__init__()
-    self.actor = Actor()
-    self.critic = Critic()
+    self.actor = Actor(hidden_size)
+    self.critic = Critic(hidden_size)
     self.policy_log_std = nn.Parameter(torch.tensor([[-0.5]]))
 
   def forward(self, state):
@@ -70,6 +70,6 @@ def create_target_network(network):
   return target_network
 
 
-def update_target_network(network, target_network, polyak_rate):
+def update_target_network(network, target_network, polyak_factor):
   for param, target_param in zip(network.parameters(), target_network.parameters()):
-    target_param.data = polyak_rate * target_param.data + (1 - polyak_rate) * param.data
+    target_param.data = polyak_factor * target_param.data + (1 - polyak_factor) * param.data
