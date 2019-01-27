@@ -1,12 +1,10 @@
-spinning-up-basic
-=================
+# spinning-up-basic
 
-Basic versions of agents from [Spinning Up in Deep RL](https://spinningup.openai.com/) written in [PyTorch](https://pytorch.org/).
+Basic versions of agents from [Spinning Up in Deep RL](https://spinningup.openai.com/) written in [PyTorch](https://pytorch.org/). **Work in progress.**
 
 To see differences between algorithms, try running `diff -y <file1> <file2>`, e.g., `diff -y ddpg.py td3.py`.
 
-Algorithms
-----------
+## Algorithms
 
 - [Vanilla Policy Gradient](https://spinningup.openai.com/en/latest/algorithms/vpg.html) (`vpg.py`)
 - [Trust Region Policy Gradient](https://spinningup.openai.com/en/latest/algorithms/trpo.html) (`trpo.py`)
@@ -15,35 +13,33 @@ Algorithms
 - [Twin Delayed DDPG](https://spinningup.openai.com/en/latest/algorithms/td3.html) (`td3.py`)
 - [Soft Actor-Critic](https://spinningup.openai.com/en/latest/algorithms/sac.html) (`sac.py`)
 
-Results
--------
+## Results
 
-VPG
+### VPG
 
 ![VPG](results/vpg.png)
 
-TRPO
+### TRPO
 
 ![TRPO](results/trpo.png)
 
-PPO
+### PPO
 
 ![PPO](results/ppo.png)
 
-DDPG
+### DDPG
 
 ![DDPG](results/ddpg.png)
 
-TD3
+### TD3
 
 ![TD3](results/td3.png)
 
-SAC
+### SAC
 
 ![SAC](results/sac.png)
 
-Code Links
-----------
+## Code Links
 
 - [Spinning Up in Deep RL](https://github.com/openai/spinningup) (TensorFlow)
 - [Fired Up in Deep RL](https://github.com/kashif/firedup) (PyTorch)
