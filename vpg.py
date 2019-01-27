@@ -2,7 +2,7 @@ import torch
 from torch import optim
 from tqdm import tqdm
 from env import Env
-from hyperparams import DISCOUNT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, TRACE_DECAY
+from hyperparams import DISCOUNT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLICY_LEARNING_RATE, TRACE_DECAY
 from hyperparams import ON_POLICY_BATCH_SIZE as BATCH_SIZE
 from models import ActorCritic
 from utils import plot
@@ -10,7 +10,7 @@ from utils import plot
 
 env = Env()
 agent = ActorCritic(HIDDEN_SIZE)
-actor_optimiser = optim.Adam(list(agent.actor.parameters()) + [agent.policy_log_std], lr=LEARNING_RATE)
+actor_optimiser = optim.Adam(list(agent.actor.parameters()) + [agent.policy_log_std], lr=POLICY_LEARNING_RATE)
 critic_optimiser = optim.Adam(agent.critic.parameters(), lr=LEARNING_RATE)
 
 

@@ -55,7 +55,7 @@ class ActorCritic(nn.Module):
     super().__init__()
     self.actor = Actor(hidden_size)
     self.critic = Critic(hidden_size)
-    self.policy_log_std = nn.Parameter(torch.tensor([[-0.5]]))
+    self.policy_log_std = nn.Parameter(torch.tensor([[0.]]))
 
   def forward(self, state):
     policy = Normal(self.actor(state), self.policy_log_std.exp())
