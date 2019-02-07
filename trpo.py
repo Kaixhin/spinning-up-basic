@@ -57,7 +57,7 @@ for step in pbar:
     if len(D) >= BATCH_SIZE:
       # Compute rewards-to-go R and advantage estimates based on the current value function V
       with torch.no_grad():
-        reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([[0.]]), torch.tensor([0.])
+        reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])
         for transition in reversed(D):
           reward_to_go = transition['reward'] + (1 - transition['done']) * (DISCOUNT * reward_to_go)
           transition['reward_to_go'] = reward_to_go
@@ -71,8 +71,8 @@ for step in pbar:
 
       # Estimate policy gradient
       policy = agent(trajectories['state'])[0]
-      policy_ratio = (policy.log_prob(trajectories['action']) - trajectories['old_log_prob_action']).exp()
-      policy_loss = -(policy_ratio * trajectories['advantage']).sum(dim=1).mean()
+      policy_ratio = (policy.log_prob(trajectories['action']).sum(dim=1) - trajectories['old_log_prob_action'].sum(dim=1)).exp()
+      policy_loss = -(policy_ratio * trajectories['advantage']).mean()
       g = parameters_to_vector(autograd.grad(policy_loss, agent.actor.parameters(), retain_graph=True)).detach()
 
       # Use the conjugate gradient algorithm to compute x, where H is the Hessian of the sample average KL-divergence
@@ -90,8 +90,8 @@ for step in pbar:
           line_search_step = BACKTRACK_COEFF ** j
           vector_to_parameters(old_parameters - line_search_step * alpha * x, agent.actor.parameters())  # Gradient descent to minimise policy loss
           policy = agent(trajectories['state'])[0]
-          policy_ratio = (policy.log_prob(trajectories['action']) - trajectories['old_log_prob_action']).exp()
-          policy_loss = -(policy_ratio * trajectories['advantage']).sum(dim=1).mean().item()
+          policy_ratio = (policy.log_prob(trajectories['action']).sum(dim=1) - trajectories['old_log_prob_action'].sum(dim=1)).exp()
+          policy_loss = -(policy_ratio * trajectories['advantage']).mean().item()
           d_kl = kl_divergence(old_policy, policy).sum(dim=1).mean().item()
           if policy_loss <= old_policy_loss and d_kl <= KL_LIMIT:
             break

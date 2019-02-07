@@ -33,7 +33,7 @@ for step in pbar:
     if len(D) >= BATCH_SIZE:
       # Compute rewards-to-go R and advantage estimates based on the current value function V
       with torch.no_grad():
-        reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([[0.]]), torch.tensor([0.])
+        reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])
         for transition in reversed(D):
           reward_to_go = transition['reward'] + (1 - transition['done']) * (DISCOUNT * reward_to_go)
           transition['reward_to_go'] = reward_to_go
@@ -46,7 +46,7 @@ for step in pbar:
       D = []
 
       # Estimate policy gradient and compute policy update
-      policy_loss = -(trajectories['log_prob_action'] * trajectories['advantage']).sum(dim=1).mean()
+      policy_loss = -(trajectories['log_prob_action'].sum(dim=1) * trajectories['advantage']).mean()
       actor_optimiser.zero_grad()
       policy_loss.backward()
       actor_optimiser.step()

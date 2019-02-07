@@ -33,7 +33,7 @@ for step in pbar:
     if len(D) >= BATCH_SIZE:
       # Compute rewards-to-go R and advantage estimates based on the current value function V
       with torch.no_grad():
-        reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([[0.]]), torch.tensor([0.])
+        reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])
         for transition in reversed(D):
           reward_to_go = transition['reward'] + (1 - transition['done']) * (DISCOUNT * reward_to_go)
           transition['reward_to_go'] = reward_to_go
@@ -52,8 +52,8 @@ for step in pbar:
           trajectories['log_prob_action'] = policy.log_prob(trajectories['action'].detach())
 
         # Update the policy by maximising the PPO-Clip objective
-        policy_ratio = (trajectories['log_prob_action'] - trajectories['old_log_prob_action']).exp()
-        policy_loss = -torch.min((policy_ratio * trajectories['advantage']).sum(dim=1), (torch.clamp(policy_ratio, min=1 - PPO_CLIP_RATIO, max=1 + PPO_CLIP_RATIO) * trajectories['advantage']).sum(dim=1)).mean()
+        policy_ratio = (trajectories['log_prob_action'].sum(dim=1) - trajectories['old_log_prob_action'].sum(dim=1)).exp()
+        policy_loss = -torch.min(policy_ratio * trajectories['advantage'], torch.clamp(policy_ratio, min=1 - PPO_CLIP_RATIO, max=1 + PPO_CLIP_RATIO) * trajectories['advantage']).mean()
         actor_optimiser.zero_grad()
         policy_loss.backward()
         actor_optimiser.step()
