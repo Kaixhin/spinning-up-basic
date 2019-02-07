@@ -61,8 +61,8 @@ for step in pbar:
         for transition in reversed(D):
           reward_to_go = transition['reward'] + (1 - transition['done']) * (DISCOUNT * reward_to_go)
           transition['reward_to_go'] = reward_to_go
-          td_error = transition['reward'] + (1 - transition['done']) * (DISCOUNT * next_value - transition['value'])
-          advantage = td_error + DISCOUNT * TRACE_DECAY * advantage
+          td_error = transition['reward'] + (1 - transition['done']) * DISCOUNT * next_value - transition['value']
+          advantage = td_error + (1 - transition['done']) * DISCOUNT * TRACE_DECAY * advantage
           transition['advantage'] = advantage
           next_value = transition['value']
       # Extra step: turn trajectories into a single batch for efficiency (valid for feedforward networks)
