@@ -11,9 +11,9 @@ from utils import plot
 
 
 env = Env()
-actor = Actor(HIDDEN_SIZE)
-critic_1 = Critic(HIDDEN_SIZE, state_action=True)
-critic_2 = Critic(HIDDEN_SIZE, state_action=True)
+actor = Actor(HIDDEN_SIZE, layer_norm=True)
+critic_1 = Critic(HIDDEN_SIZE, state_action=True, layer_norm=True)
+critic_2 = Critic(HIDDEN_SIZE, state_action=True, layer_norm=True)
 target_actor = create_target_network(actor)
 target_critic_1 = create_target_network(critic_1)
 target_critic_2 = create_target_network(critic_2)

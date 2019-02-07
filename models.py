@@ -5,9 +5,12 @@ from torch.distributions import Normal
 
 
 class Actor(nn.Module):
-  def __init__(self, hidden_size):
+  def __init__(self, hidden_size, layer_norm=False):
     super().__init__()
-    self.actor = nn.Sequential(nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 1))
+    layers = [nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 1)]
+    if layer_norm:
+      layers = layers[:1] + [nn.LayerNorm(hidden_size)] + layers[1:3] + [nn.LayerNorm(hidden_size)] + layers[3:]  # Insert layer normalisation between fully-connected layers and nonlinearities
+    self.actor = nn.Sequential(*layers)
 
   def forward(self, state):
     policy = self.actor(state)
@@ -24,11 +27,16 @@ class TanhNormal(Normal):
   def log_prob(self, value):
     return super().log_prob(torch.atan(value)) - torch.log(1 - value.pow(2) + 1e-8) 
 
+  @property
+  def mean(self):
+    return torch.tanh(super().mean)
+
 
 class SoftActor(nn.Module):
   def __init__(self, hidden_size):
     super().__init__()
-    self.actor = nn.Sequential(nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 2))
+    layers = [nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 2)]
+    self.actor = nn.Sequential(*layers)
 
   def forward(self, state):
     policy_mean, policy_log_std = self.actor(state).chunk(2, dim=1)
@@ -37,10 +45,13 @@ class SoftActor(nn.Module):
 
 
 class Critic(nn.Module):
-  def __init__(self, hidden_size, state_action=False):
+  def __init__(self, hidden_size, state_action=False, layer_norm=False):
     super().__init__()
     self.state_action = state_action
-    self.critic = nn.Sequential(nn.Linear(3 + (1 if state_action else 0), hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 1))
+    layers = [nn.Linear(3 + (1 if state_action else 0), hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 1)]
+    if layer_norm:
+      layers = layers[:1] + [nn.LayerNorm(hidden_size)] + layers[1:3] + [nn.LayerNorm(hidden_size)] + layers[3:]  # Insert layer normalisation between fully-connected layers and nonlinearities
+    self.critic = nn.Sequential(*layers)
 
   def forward(self, state, action=None):
     if self.state_action:

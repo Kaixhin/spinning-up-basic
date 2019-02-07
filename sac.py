@@ -3,7 +3,7 @@ import random
 import torch
 from torch import optim
 from tqdm import tqdm
-from hyperparams import DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START
+from hyperparams import DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, TEST_INTERVAL, UPDATE_INTERVAL, UPDATE_START
 from hyperparams import OFF_POLICY_BATCH_SIZE as BATCH_SIZE
 from env import Env
 from models import Critic, SoftActor, create_target_network, update_target_network
@@ -22,7 +22,17 @@ value_critic_optimiser = optim.Adam(value_critic.parameters(), lr=LEARNING_RATE)
 D = deque(maxlen=REPLAY_SIZE)
 
 
-state, done, total_reward = env.reset(), False, 0
+def test(actor):
+  env = Env()
+  state, done, total_reward = env.reset(), False, 0
+  while not done:
+    action = actor(state).mean  # Use purely exploitative policy at test time
+    state, reward, done = env.step(action)
+    total_reward += reward
+  return total_reward
+
+
+state, done = env.reset(), False
 pbar = tqdm(range(1, MAX_STEPS + 1), unit_scale=1, smoothing=0)
 for step in pbar:
   with torch.no_grad():
@@ -34,15 +44,12 @@ for step in pbar:
       action = actor(state).sample()
     # Execute a in the environment and observe next state s', reward r, and done signal d to indicate whether s' is terminal
     next_state, reward, done = env.step(action)
-    total_reward += reward
     # Store (s, a, r, s', d) in replay buffer D
     D.append({'state': state, 'action': action, 'reward': torch.tensor([reward]), 'next_state': next_state, 'done': torch.tensor([done], dtype=torch.float32)})
     state = next_state
     # If s' is terminal, reset environment state
     if done:
-      pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
-      plot(step, total_reward, 'sac')
-      state, total_reward = env.reset(), 0
+      state = env.reset()
 
   if step > UPDATE_START and step % UPDATE_INTERVAL == 0:
     # Randomly sample a batch of transitions B = {(s, a, r, s', d)} from D
@@ -76,3 +83,11 @@ for step in pbar:
 
     # Update target value network
     update_target_network(value_critic, target_value_critic, POLYAK_FACTOR)
+
+  if step > UPDATE_START and step % TEST_INTERVAL == 0:
+    with torch.no_grad():
+      actor.eval()
+      total_reward = test(actor)
+      pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
+      plot(step, total_reward, 'sac')
+      actor.train()
