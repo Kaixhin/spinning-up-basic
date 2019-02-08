@@ -23,13 +23,14 @@ D = deque(maxlen=REPLAY_SIZE)
 
 
 def test(actor):
-  env = Env()
-  state, done, total_reward = env.reset(), False, 0
-  while not done:
-    action = actor(state).mean  # Use purely exploitative policy at test time
-    state, reward, done = env.step(action)
-    total_reward += reward
-  return total_reward
+  with torch.no_grad():
+    env = Env()
+    state, done, total_reward = env.reset(), False, 0
+    while not done:
+      action = actor(state).mean  # Use purely exploitative policy at test time
+      state, reward, done = env.step(action)
+      total_reward += reward
+    return total_reward
 
 
 state, done = env.reset(), False
@@ -85,9 +86,8 @@ for step in pbar:
     update_target_network(value_critic, target_value_critic, POLYAK_FACTOR)
 
   if step > UPDATE_START and step % TEST_INTERVAL == 0:
-    with torch.no_grad():
-      actor.eval()
-      total_reward = test(actor)
-      pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
-      plot(step, total_reward, 'sac')
-      actor.train()
+    actor.eval()
+    total_reward = test(actor)
+    pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
+    plot(step, total_reward, 'sac')
+    actor.train()
