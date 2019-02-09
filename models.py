@@ -74,6 +74,17 @@ class ActorCritic(nn.Module):
     return policy, value
 
 
+class DQN(nn.Module):
+  def __init__(self, hidden_size, num_actions=5):
+    super().__init__()
+    layers = [nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, num_actions)]
+    self.dqn = nn.Sequential(*layers)
+
+  def forward(self, state):
+    values = self.dqn(state)
+    return values
+
+
 def create_target_network(network):
   target_network = copy.deepcopy(network)
   for param in target_network.parameters():
