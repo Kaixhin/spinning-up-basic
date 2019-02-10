@@ -65,8 +65,10 @@ for step in pbar:
           advantage = td_error + (1 - transition['done']) * DISCOUNT * TRACE_DECAY * advantage
           transition['advantage'] = advantage
           next_value = transition['value']
-      # Extra step: turn trajectories into a single batch for efficiency (valid for feedforward networks)
+      # Turn trajectories into a single batch for efficiency (valid for feedforward networks)
       trajectories = {k: torch.cat([trajectory[k] for trajectory in D], dim=0) for k in D[0].keys()}
+      # Extra step: normalise advantages
+      trajectories['advantage'] = (trajectories['advantage'] - trajectories['advantage'].mean()) / (trajectories['advantage'].std() + 1e-8)
       D = []
 
       # Estimate policy gradient
