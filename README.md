@@ -1,48 +1,48 @@
 # spinning-up-basic
 
-Basic versions of agents from [Spinning Up in Deep RL](https://spinningup.openai.com/) written in [PyTorch](https://pytorch.org/). **Work in progress.**
+Basic versions of agents from [Spinning Up in Deep RL](https://spinningup.openai.com/) written in [PyTorch](https://pytorch.org/).
 
 To see differences between algorithms, try running `diff -y <file1> <file2>`, e.g., `diff -y ddpg.py td3.py`.
 
 ## Algorithms
 
-- [Vanilla Policy Gradient](https://spinningup.openai.com/en/latest/algorithms/vpg.html) (`vpg.py`)
+- [Vanilla Policy Gradient](https://spinningup.openai.com/en/latest/algorithms/vpg.html)/Advantage Actor-Critic (`vpg.py`)
 - [Trust Region Policy Gradient](https://spinningup.openai.com/en/latest/algorithms/trpo.html) (`trpo.py`)
 - [Proximal Policy Optimization](https://spinningup.openai.com/en/latest/algorithms/ppo.html) (`ppo.py`)
-- Deep Q-Network (`dqn.py`)
 - [Deep Deterministic Policy Gradient](https://spinningup.openai.com/en/latest/algorithms/ddpg.html) (`ddpg.py`)
 - [Twin Delayed DDPG](https://spinningup.openai.com/en/latest/algorithms/td3.html) (`td3.py`)
 - [Soft Actor-Critic](https://spinningup.openai.com/en/latest/algorithms/sac.html) (`sac.py`)
+- Deep Q-Network (`dqn.py`)
 
 ## Results
 
-### VPG
+### Vanilla Policy Gradient/Advantage Actor-Critic
 
 ![VPG](results/vpg.png)
 
-### TRPO
+### Trust Region Policy Gradient
 
 ![TRPO](results/trpo.png)
 
-### PPO
+### Proximal Policy Optimization
 
 ![PPO](results/ppo.png)
 
-### DQN
-
-![DQN](results/dqn.png)
-
-### DDPG
+### Deep Deterministic Policy Gradient
 
 ![DDPG](results/ddpg.png)
 
-### TD3
+### Twin Delayed DDPG
 
 ![TD3](results/td3.png)
 
-### SAC
+### Soft Actor-Critic
 
 ![SAC](results/sac.png)
+
+### Deep Q-Network
+
+![DQN](results/dqn.png)
 
 ## Code Links
 
