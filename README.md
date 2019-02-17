@@ -4,6 +4,8 @@ Basic versions of agents from [Spinning Up in Deep RL](https://spinningup.openai
 
 To see differences between algorithms, try running `diff -y <file1> <file2>`, e.g., `diff -y ddpg.py td3.py`.
 
+For MPI versions of on-policy algorithms, see the [`mpi` branch](https://github.com/Kaixhin/spinning-up-basic/tree/mpi).
+
 ## Algorithms
 
 - [Vanilla Policy Gradient](https://spinningup.openai.com/en/latest/algorithms/vpg.html)/Advantage Actor-Critic (`vpg.py`)
