@@ -6,8 +6,7 @@ from torch.distributions.kl import kl_divergence
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from tqdm import tqdm
 from env import Env
-from hyperparams import BACKTRACK_COEFF, BACKTRACK_ITERS, CONJUGATE_GRADIENT_ITERS, DAMPING_COEFF, DISCOUNT, HIDDEN_SIZE, KL_LIMIT, LEARNING_RATE, MAX_STEPS, TRACE_DECAY
-from hyperparams import ON_POLICY_BATCH_SIZE as BATCH_SIZE
+from hyperparams import BACKTRACK_COEFF, BACKTRACK_ITERS, ON_POLICY_BATCH_SIZE as BATCH_SIZE, CONJUGATE_GRADIENT_ITERS, DAMPING_COEFF, DISCOUNT, HIDDEN_SIZE, KL_LIMIT, LEARNING_RATE, MAX_STEPS, TRACE_DECAY
 from models import ActorCritic
 from utils import plot
 

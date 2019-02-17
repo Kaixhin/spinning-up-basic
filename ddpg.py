@@ -4,8 +4,7 @@ import torch
 from torch import optim
 from tqdm import tqdm
 from env import Env
-from hyperparams import ACTION_NOISE, DISCOUNT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, TEST_INTERVAL, UPDATE_INTERVAL, UPDATE_START
-from hyperparams import OFF_POLICY_BATCH_SIZE as BATCH_SIZE
+from hyperparams import ACTION_NOISE, OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, TEST_INTERVAL, UPDATE_INTERVAL, UPDATE_START
 from models import Actor, Critic, create_target_network, update_target_network
 from utils import plot
 
