@@ -10,7 +10,7 @@ from utils import plot
 
 env = Env()
 agent = ActorCritic(HIDDEN_SIZE)
-actor_optimiser = optim.Adam(list(agent.actor.parameters()) + [agent.policy_log_std], lr=POLICY_LEARNING_RATE)
+actor_optimiser = optim.Adam(agent.actor.parameters(), lr=POLICY_LEARNING_RATE)
 critic_optimiser = optim.Adam(agent.critic.parameters(), lr=LEARNING_RATE)
 
 
