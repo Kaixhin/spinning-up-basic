@@ -74,7 +74,7 @@ for step in pbar:
       policy = agent(trajectories['state'])[0]
       policy_ratio = (policy.log_prob(trajectories['action']).sum(dim=1) - trajectories['old_log_prob_action'].sum(dim=1)).exp()
       policy_loss = -(policy_ratio * trajectories['advantage']).mean()
-      g = parameters_to_vector(autograd.grad(policy_loss, agent.actor.parameters(), retain_graph=True)).detach()
+      g = parameters_to_vector(autograd.grad(policy_loss, agent.actor.parameters(), retain_graph=True))
 
       # Use the conjugate gradient algorithm to compute x, where H is the Hessian of the sample average KL-divergence
       old_policy = Normal(trajectories['old_policy_mean'], trajectories['old_policy_std'])
