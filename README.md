@@ -2,6 +2,8 @@
 
 Basic versions of agents from [Spinning Up in Deep RL](https://spinningup.openai.com/) written in [PyTorch](https://pytorch.org/). Designed to run quickly on CPU on [`Pendulum-v0`](https://gym.openai.com/envs/Pendulum-v0/) from [OpenAI Gym](https://gym.openai.com/).
 
+On-policy algorithms require MPI (and `mpi4py`), e.g., run them as such: `mpirun -n 4 python vpg.py`. **Note that results shown below are for the non-MPI versions.**
+
 To see differences between algorithms, try running `diff -y <file1> <file2>`, e.g., `diff -y ddpg.py td3.py`.
 
 For MPI versions of on-policy algorithms, see the [`mpi` branch](https://github.com/Kaixhin/spinning-up-basic/tree/mpi).

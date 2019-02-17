@@ -1,4 +1,6 @@
 from functools import partial
+from mpi4py import MPI
+import numpy as np
 import torch
 from torch import autograd, optim
 from torch.distributions import Normal
@@ -7,13 +9,14 @@ from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from tqdm import tqdm
 from env import Env
 from hyperparams import BACKTRACK_COEFF, BACKTRACK_ITERS, ON_POLICY_BATCH_SIZE as BATCH_SIZE, CONJUGATE_GRADIENT_ITERS, DAMPING_COEFF, DISCOUNT, HIDDEN_SIZE, KL_LIMIT, LEARNING_RATE, MAX_STEPS, TRACE_DECAY
-from models import ActorCritic
-from utils import plot
+from models import ActorCritic, params_to_vec, sync_grads, vec_to_params
+from utils import plot, setup_mpi
 
 
 env = Env()
 agent = ActorCritic(HIDDEN_SIZE)
 critic_optimiser = optim.Adam(agent.critic.parameters(), lr=LEARNING_RATE)
+comm = setup_mpi(agent)
 
 
 def hessian_vector_product(d_kl, x):
@@ -38,7 +41,8 @@ def conjugate_gradient(Ax, b):
 
 
 state, done, total_reward, D = env.reset(), False, 0, []
-pbar = tqdm(range(1, MAX_STEPS + 1), unit_scale=1, smoothing=0)
+pbar = range(1, MAX_STEPS + 1, comm.Get_size())
+pbar = tqdm(pbar, unit_scale=comm.Get_size(), smoothing=0) if comm.Get_rank() == 0 else pbar
 for step in pbar:
   # Collect set of trajectories D by running policy π in the environment
   policy, value = agent(state)
@@ -49,8 +53,9 @@ for step in pbar:
   D.append({'state': state, 'action': action, 'reward': torch.tensor([reward]), 'done': torch.tensor([done], dtype=torch.float32), 'log_prob_action': log_prob_action, 'old_log_prob_action': log_prob_action.detach(), 'old_policy_mean': policy.loc.detach(), 'old_policy_std': policy.scale.detach(), 'value': value})
   state = next_state
   if done:
-    pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
-    plot(step, total_reward, 'trpo')
+    if comm.Get_rank() == 0:
+      pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
+      plot(step, total_reward, 'trpo')
     state, total_reward = env.reset(), 0
 
     if len(D) >= BATCH_SIZE:
@@ -80,7 +85,10 @@ for step in pbar:
       old_policy = Normal(trajectories['old_policy_mean'], trajectories['old_policy_std'])
       d_kl = kl_divergence(old_policy, policy).sum(dim=1).mean()
       Hx = partial(hessian_vector_product, d_kl)
-      x = conjugate_gradient(Hx, g)  # Solve Hx = g for (step direction) x = inv(H)g
+      x = conjugate_gradient(Hx, g).numpy()  # Solve Hx = g for (step direction) x = inv(H)g
+      x_recv = np.zeros_like(x)
+      comm.Allreduce(x, x_recv, op=MPI.SUM)  # Sync actor step direction
+      x = torch.from_numpy(x_recv / comm.Get_size())
 
       # Update the policy by backtracking line search with the smallest value that improves the sample loss and satisfies the sample KL-divergence constraint
       alpha = torch.sqrt(2 * KL_LIMIT / (torch.dot(x, Hx(x)) + 1e-8)).item()  # Step size
@@ -103,4 +111,5 @@ for step in pbar:
       value_loss = (trajectories['value'] - trajectories['reward_to_go']).pow(2).mean()
       critic_optimiser.zero_grad()
       value_loss.backward()
+      sync_grads(comm, agent.critic)  # Sync critic gradients
       critic_optimiser.step()

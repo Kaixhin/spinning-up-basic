@@ -1,4 +1,6 @@
 import copy
+from mpi4py import MPI
+import numpy as np
 import torch
 from torch import nn
 from torch.distributions import Distribution, Normal
@@ -104,3 +106,26 @@ def create_target_network(network):
 def update_target_network(network, target_network, polyak_factor):
   for param, target_param in zip(network.parameters(), target_network.parameters()):
     target_param.data = polyak_factor * target_param.data + (1 - polyak_factor) * param.data
+
+
+# Extracts a numpy vector of parameters/gradients from a network
+def params_to_vec(network, mode):
+  attr = 'data' if mode == 'params' else 'grad'
+  return np.concatenate([getattr(param, attr).detach().view(-1).numpy() for param in network.parameters()])
+
+
+# Copies a numpy vector of parameters/gradients into a network
+def vec_to_params(vec, network, mode):
+  attr = 'data' if mode == 'params' else 'grad'
+  param_pointer = 0
+  for param in network.parameters():
+    getattr(param, attr).copy_(torch.from_numpy(vec[param_pointer:param_pointer + param.data.numel()]).view_as(param.data))
+    param_pointer += param.data.numel()
+
+
+# Synchronises a network's gradients across processes
+def sync_grads(comm, network):
+  grad_vec_send = params_to_vec(network, mode='grads')
+  grad_vec_recv = np.zeros_like(grad_vec_send)
+  comm.Allreduce(grad_vec_send, grad_vec_recv, op=MPI.SUM)
+  vec_to_params(grad_vec_recv / comm.Get_size(), network, mode='grads')

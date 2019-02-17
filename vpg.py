@@ -3,18 +3,20 @@ from torch import optim
 from tqdm import tqdm
 from env import Env
 from hyperparams import ON_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, TRACE_DECAY
-from models import ActorCritic
-from utils import plot
+from models import ActorCritic, params_to_vec, sync_grads, vec_to_params
+from utils import plot, setup_mpi
 
 
 env = Env()
 agent = ActorCritic(HIDDEN_SIZE)
 actor_optimiser = optim.Adam(agent.actor.parameters(), lr=LEARNING_RATE)
 critic_optimiser = optim.Adam(agent.critic.parameters(), lr=LEARNING_RATE)
+comm = setup_mpi(agent)
 
 
 state, done, total_reward, D = env.reset(), False, 0, []
-pbar = tqdm(range(1, MAX_STEPS + 1), unit_scale=1, smoothing=0)
+pbar = range(1, MAX_STEPS + 1, comm.Get_size())
+pbar = tqdm(pbar, unit_scale=comm.Get_size(), smoothing=0) if comm.Get_rank() == 0 else pbar
 for step in pbar:
   # Collect set of trajectories D by running policy π in the environment
   policy, value = agent(state)
@@ -25,8 +27,9 @@ for step in pbar:
   D.append({'state': state, 'action': action, 'reward': torch.tensor([reward]), 'done': torch.tensor([done], dtype=torch.float32), 'log_prob_action': log_prob_action, 'value': value})
   state = next_state
   if done:
-    pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
-    plot(step, total_reward, 'vpg')
+    if comm.Get_rank() == 0:
+      pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
+      plot(step, total_reward, 'vpg')
     state, total_reward = env.reset(), 0
 
     if len(D) >= BATCH_SIZE:
@@ -50,10 +53,12 @@ for step in pbar:
       policy_loss = -(trajectories['log_prob_action'].sum(dim=1) * trajectories['advantage']).mean()
       actor_optimiser.zero_grad()
       policy_loss.backward()
+      sync_grads(comm, agent.actor)  # Sync actor gradients
       actor_optimiser.step()
 
       # Fit value function by regression on mean-squared error
       value_loss = (trajectories['value'] - trajectories['reward_to_go']).pow(2).mean()
       critic_optimiser.zero_grad()
       value_loss.backward()
+      sync_grads(comm, agent.critic)  # Sync critic gradients
       critic_optimiser.step()

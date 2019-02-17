@@ -1,4 +1,5 @@
 gym
 matplotlib
+mpi4py
 torch
 tqdm
