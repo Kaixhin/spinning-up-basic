@@ -1,6 +1,6 @@
 # spinning-up-basic
 
-Basic versions of agents from [Spinning Up in Deep RL](https://spinningup.openai.com/) written in [PyTorch](https://pytorch.org/).
+Basic versions of agents from [Spinning Up in Deep RL](https://spinningup.openai.com/) written in [PyTorch](https://pytorch.org/). Designed to run quickly on CPU on [`Pendulum-v0`](https://gym.openai.com/envs/Pendulum-v0/) from [OpenAI Gym](https://gym.openai.com/).
 
 To see differences between algorithms, try running `diff -y <file1> <file2>`, e.g., `diff -y ddpg.py td3.py`.
 
