@@ -60,7 +60,7 @@ for step in pbar:
     y_q = batch['reward'] + DISCOUNT * (1 - batch['done']) * target_value_critic(batch['next_state'])
     policy = actor(batch['state'])
     action = policy.rsample()  # a(s) is a sample from μ(·|s) which is differentiable wrt θ via the reparameterisation trick
-    weighted_sample_entropy = (ENTROPY_WEIGHT * policy.log_prob(action)).sum(dim=1)
+    weighted_sample_entropy = ENTROPY_WEIGHT * policy.log_prob(action).sum(dim=1)  # Note: in practice it is more numerically stable to calculate the log probability when sampling an action to avoid inverting tanh
     y_v = torch.min(critic_1(batch['state'], action.detach()), critic_2(batch['state'], action.detach())) - weighted_sample_entropy.detach()
 
     # Update Q-functions by one step of gradient descent
@@ -76,7 +76,7 @@ for step in pbar:
     value_critic_optimiser.step()
 
     # Update policy by one step of gradient ascent
-    policy_loss = -(critic_1(batch['state'], action) + weighted_sample_entropy).mean()
+    policy_loss = (weighted_sample_entropy - critic_1(batch['state'], action)).mean()
     actor_optimiser.zero_grad()
     policy_loss.backward()
     actor_optimiser.step()

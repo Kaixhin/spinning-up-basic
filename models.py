@@ -1,7 +1,7 @@
 import copy
 import torch
 from torch import nn
-from torch.distributions import Normal
+from torch.distributions import Distribution, Normal
 
 
 class Actor(nn.Module):
@@ -19,29 +19,37 @@ class Actor(nn.Module):
     return policy
 
 
-class TanhNormal(Normal):
-  def rsample(self):
-    return torch.tanh(self.loc + self.scale * torch.randn_like(self.scale))
+class TanhNormal(Distribution):
+  def __init__(self, loc, scale):
+    super().__init__()
+    self.normal = Normal(loc, scale)
 
   def sample(self):
-    return self.rsample().detach()
+    return torch.tanh(self.normal.sample())
 
+  def rsample(self):
+    return torch.tanh(self.normal.rsample())
+
+  # Calculates log probability of value using the change-of-variables technique (uses log1p = log(1 + x) for extra numerical stability)
   def log_prob(self, value):
-    return super().log_prob(torch.atan(value)) - torch.log(1 - value.pow(2) + 1e-8) 
+    inv_value = (torch.log1p(value) - torch.log1p(-value)) / 2  # artanh(y)
+    return self.normal.log_prob(inv_value) - torch.log1p(-value.pow(2) + 1e-6)  # log p(f^-1(y)) + log |det(J(f^-1(y)))|
 
   @property
   def mean(self):
-    return torch.tanh(super().mean)
+    return torch.tanh(self.normal.mean)
 
 
 class SoftActor(nn.Module):
   def __init__(self, hidden_size):
     super().__init__()
+    self.log_std_min, self.log_std_max = -20, 2  # Constrain range of standard deviations to prevent very deterministic/stochastic policies
     layers = [nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 2)]
     self.policy = nn.Sequential(*layers)
 
   def forward(self, state):
     policy_mean, policy_log_std = self.policy(state).chunk(2, dim=1)
+    policy_log_std = torch.clamp(policy_log_std, min=self.log_std_min, max=self.log_std_max)
     policy = TanhNormal(policy_mean, policy_log_std.exp())
     return policy
 
