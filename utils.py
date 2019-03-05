@@ -14,5 +14,4 @@ def plot(step, reward, title):
   plt.xlabel('Steps')
   plt.ylabel('Rewards')
   plt.xlim((0, MAX_STEPS))
-  plt.ylim((-2000, 0))
   plt.savefig(os.path.join('results', title + '.png'))

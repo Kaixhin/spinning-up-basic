@@ -44,7 +44,7 @@ class SoftActor(nn.Module):
   def __init__(self, hidden_size):
     super().__init__()
     self.log_std_min, self.log_std_max = -20, 2  # Constrain range of standard deviations to prevent very deterministic/stochastic policies
-    layers = [nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 2)]
+    layers = [nn.Linear(2, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 2)]
     self.policy = nn.Sequential(*layers)
 
   def forward(self, state):
@@ -58,7 +58,7 @@ class Critic(nn.Module):
   def __init__(self, hidden_size, state_action=False, layer_norm=False):
     super().__init__()
     self.state_action = state_action
-    layers = [nn.Linear(3 + (1 if state_action else 0), hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 1)]
+    layers = [nn.Linear(2 + (1 if state_action else 0), hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 1)]
     if layer_norm:
       layers = layers[:1] + [nn.LayerNorm(hidden_size)] + layers[1:3] + [nn.LayerNorm(hidden_size)] + layers[3:]  # Insert layer normalisation between fully-connected layers and nonlinearities
     self.value = nn.Sequential(*layers)

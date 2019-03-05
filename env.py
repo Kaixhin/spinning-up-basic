@@ -4,7 +4,7 @@ import torch
 
 class Env():
   def __init__(self):
-    self._env = gym.make('Pendulum-v0')
+    self._env = gym.make('MountainCarContinuous-v0')
 
   def reset(self):
     state = self._env.reset()
