@@ -56,18 +56,11 @@ for step in pbar:
     batch = random.sample(D, BATCH_SIZE)
     batch = {k: torch.cat([d[k] for d in batch], dim=0) for k in batch[0].keys()}
 
-    # Compute targets for Q and V functions
-    y_q = batch['reward'] + DISCOUNT * (1 - batch['done']) * target_value_critic(batch['next_state'])
+    # Compute target for V-function
     policy = actor(batch['state'])
     action = policy.rsample()  # a(s) is a sample from μ(·|s) which is differentiable wrt θ via the reparameterisation trick
-    weighted_sample_entropy = ENTROPY_WEIGHT * policy.log_prob(action).sum(dim=1)  # Note: in practice it is more numerically stable to calculate the log probability when sampling an action to avoid inverting tanh
-    y_v = torch.min(critic_1(batch['state'], action.detach()), critic_2(batch['state'], action.detach())) - weighted_sample_entropy.detach()
-
-    # Update Q-functions by one step of gradient descent
-    value_loss = (critic_1(batch['state'], batch['action']) - y_q).pow(2).mean() + (critic_2(batch['state'], batch['action']) - y_q).pow(2).mean()
-    critics_optimiser.zero_grad()
-    value_loss.backward()
-    critics_optimiser.step()
+    weighted_sample_entropy = ENTROPY_WEIGHT * policy.log_prob(action)  # Note: in practice it is more numerically stable to calculate the log probability when sampling an action to avoid inverting tanh
+    y_v = torch.min(critic_1(batch['state'], action), critic_2(batch['state'], action)).detach() - weighted_sample_entropy.detach()
 
     # Update V-function by one step of gradient descent
     value_loss = (value_critic(batch['state']) - y_v).pow(2).mean()
@@ -75,8 +68,17 @@ for step in pbar:
     value_loss.backward()
     value_critic_optimiser.step()
 
+    # Compute target for Q-function
+    y_q = batch['reward'] + DISCOUNT * (1 - batch['done']) * target_value_critic(batch['next_state'])
+
+    # Update Q-functions by one step of gradient descent
+    value_loss = (critic_1(batch['state'], batch['action']) - y_q).pow(2).mean() + (critic_2(batch['state'], batch['action']) - y_q).pow(2).mean()
+    critics_optimiser.zero_grad()
+    value_loss.backward()
+    critics_optimiser.step()
+
     # Update policy by one step of gradient ascent
-    policy_loss = (weighted_sample_entropy - critic_1(batch['state'], action)).mean()
+    policy_loss = (weighted_sample_entropy - torch.min(critic_1(batch['state'], action), critic_2(batch['state'], action))).mean()
     actor_optimiser.zero_grad()
     policy_loss.backward()
     actor_optimiser.step()

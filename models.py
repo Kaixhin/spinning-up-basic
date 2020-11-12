@@ -1,7 +1,7 @@
 import copy
 import torch
 from torch import nn
-from torch.distributions import Distribution, Normal
+from torch.distributions import Distribution, Independent, Normal
 
 
 class Actor(nn.Module):
@@ -22,7 +22,7 @@ class Actor(nn.Module):
 class TanhNormal(Distribution):
   def __init__(self, loc, scale):
     super().__init__()
-    self.normal = Normal(loc, scale)
+    self.normal = Independent(Normal(loc, scale), 1)
 
   def sample(self):
     return torch.tanh(self.normal.sample())
@@ -78,7 +78,7 @@ class ActorCritic(nn.Module):
     self.critic = Critic(hidden_size)
 
   def forward(self, state):
-    policy = Normal(self.actor(state), self.actor.policy_log_std.exp())
+    policy = Independent(Normal(self.actor(state), self.actor.policy_log_std.exp()), 1)
     value = self.critic(state)
     return policy, value
 

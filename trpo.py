@@ -1,7 +1,7 @@
 from functools import partial
 import torch
 from torch import autograd, optim
-from torch.distributions import Normal
+from torch.distributions import Independent, Normal
 from torch.distributions.kl import kl_divergence
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from tqdm import tqdm
@@ -46,7 +46,7 @@ for step in pbar:
   log_prob_action = policy.log_prob(action)
   next_state, reward, done = env.step(action)
   total_reward += reward
-  D.append({'state': state, 'action': action, 'reward': torch.tensor([reward]), 'done': torch.tensor([done], dtype=torch.float32), 'log_prob_action': log_prob_action, 'old_log_prob_action': log_prob_action.detach(), 'old_policy_mean': policy.loc.detach(), 'old_policy_std': policy.scale.detach(), 'value': value})
+  D.append({'state': state, 'action': action, 'reward': torch.tensor([reward]), 'done': torch.tensor([done], dtype=torch.float32), 'log_prob_action': log_prob_action, 'old_log_prob_action': log_prob_action.detach(), 'old_policy_mean': policy.base_dist.loc.detach(), 'old_policy_std': policy.base_dist.scale.detach(), 'value': value})
   state = next_state
   if done:
     pbar.set_description('Step: %i | Reward: %f' % (step, total_reward))
@@ -72,13 +72,13 @@ for step in pbar:
 
       # Estimate policy gradient
       policy = agent(trajectories['state'])[0]
-      policy_ratio = (policy.log_prob(trajectories['action']).sum(dim=1) - trajectories['old_log_prob_action'].sum(dim=1)).exp()
+      policy_ratio = (policy.log_prob(trajectories['action']) - trajectories['old_log_prob_action']).exp()
       policy_loss = -(policy_ratio * trajectories['advantage']).mean()
       g = parameters_to_vector(autograd.grad(policy_loss, agent.actor.parameters(), retain_graph=True))
 
       # Use the conjugate gradient algorithm to compute x, where H is the Hessian of the sample average KL-divergence
-      old_policy = Normal(trajectories['old_policy_mean'], trajectories['old_policy_std'])
-      d_kl = kl_divergence(old_policy, policy).sum(dim=1).mean()
+      old_policy = Independent(Normal(trajectories['old_policy_mean'], trajectories['old_policy_std']), 1)
+      d_kl = kl_divergence(old_policy, policy).mean()
       Hx = partial(hessian_vector_product, d_kl)
       x = conjugate_gradient(Hx, g)  # Solve Hx = g for (step direction) x = inv(H)g
 
@@ -91,9 +91,9 @@ for step in pbar:
           line_search_step = BACKTRACK_COEFF ** j
           vector_to_parameters(old_parameters - line_search_step * alpha * x, agent.actor.parameters())  # Gradient descent to minimise policy loss
           policy = agent(trajectories['state'])[0]
-          policy_ratio = (policy.log_prob(trajectories['action']).sum(dim=1) - trajectories['old_log_prob_action'].sum(dim=1)).exp()
+          policy_ratio = (policy.log_prob(trajectories['action']) - trajectories['old_log_prob_action']).exp()
           policy_loss = -(policy_ratio * trajectories['advantage']).mean().item()
-          d_kl = kl_divergence(old_policy, policy).sum(dim=1).mean().item()
+          d_kl = kl_divergence(old_policy, policy).mean().item()
           if policy_loss <= old_policy_loss and d_kl <= KL_LIMIT:
             break
           elif j == BACKTRACK_ITERS - 1:

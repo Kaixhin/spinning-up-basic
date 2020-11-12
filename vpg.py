@@ -47,7 +47,7 @@ for step in pbar:
       D = []
 
       # Estimate policy gradient and compute policy update
-      policy_loss = -(trajectories['log_prob_action'].sum(dim=1) * trajectories['advantage']).mean()
+      policy_loss = -(trajectories['log_prob_action'] * trajectories['advantage']).mean()
       actor_optimiser.zero_grad()
       policy_loss.backward()
       actor_optimiser.step()
