@@ -33,7 +33,7 @@ class TanhNormal(Distribution):
   # Calculates log probability of value using the change-of-variables technique (uses log1p = log(1 + x) for extra numerical stability)
   def log_prob(self, value):
     inv_value = (torch.log1p(value) - torch.log1p(-value)) / 2  # artanh(y)
-    return self.normal.log_prob(inv_value) - torch.log1p(-value.pow(2) + 1e-6)  # log p(f^-1(y)) + log |det(J(f^-1(y)))|
+    return self.normal.log_prob(inv_value) - torch.log1p(-value.pow(2) + 1e-6).sum(dim=1)  # log p(f^-1(y)) + log |det(J(f^-1(y)))|
 
   @property
   def mean(self):
