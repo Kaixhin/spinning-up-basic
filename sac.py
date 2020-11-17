@@ -8,8 +8,9 @@ from env import Env
 from models import Critic, SoftActor, create_target_network, update_target_network
 from utils import plot
 
+
 env = Env()
-actor = SoftActor(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE)
+actor = SoftActor(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE, env.action_space.low, env.action_space.high)
 critic_1 = Critic(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE, state_action=True)
 critic_2 = Critic(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE, state_action=True)
 value_critic = Critic(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE)
@@ -25,7 +26,7 @@ def test(actor):
     env = Env()
     state, done, total_reward = env.reset(), False, 0
     while not done:
-      action = actor(state).mean  # Use purely exploitative policy at test time
+      action = actor(state).mean_  # Use purely exploitative policy at test time
       state, reward, done = env.step(action)
       total_reward += reward
     return total_reward

@@ -1,7 +1,8 @@
 import copy
 import torch
 from torch import nn
-from torch.distributions import Distribution, Independent, Normal
+from torch.distributions import Distribution, Independent, Normal, TransformedDistribution
+from torch.distributions.transforms import AffineTransform, TanhTransform
 
 
 class Actor(nn.Module):
@@ -19,38 +20,19 @@ class Actor(nn.Module):
     return policy
 
 
-class TanhNormal(Distribution):
-  def __init__(self, loc, scale):
-    super().__init__()
-    self.normal = Independent(Normal(loc, scale), 1)
-
-  def sample(self):
-    return torch.tanh(self.normal.sample())
-
-  def rsample(self):
-    return torch.tanh(self.normal.rsample())
-
-  # Calculates log probability of value using the change-of-variables technique (uses log1p = log(1 + x) for extra numerical stability)
-  def log_prob(self, value):
-    inv_value = (torch.log1p(value) - torch.log1p(-value)) / 2  # artanh(y)
-    return self.normal.log_prob(inv_value) - torch.log1p(-value.pow(2) + 1e-6).sum(dim=1)  # log p(f^-1(y)) + log |det(J(f^-1(y)))|
-
-  @property
-  def mean(self):
-    return torch.tanh(self.normal.mean)
-
-
 class SoftActor(nn.Module):
-  def __init__(self, observation_size, action_size, hidden_size):
+  def __init__(self, observation_size, action_size, hidden_size, min_action, max_action):
     super().__init__()
     self.log_std_min, self.log_std_max = -20, 2  # Constrain range of standard deviations to prevent very deterministic/stochastic policies
+    self.action_loc, self.action_scale = torch.tensor(max_action + min_action, dtype=torch.float32) / 2, torch.tensor(max_action - min_action, dtype=torch.float32) / 2    # Affine transformation from (-1, 1) to action space bounds
     layers = [nn.Linear(observation_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 2 * action_size)]
     self.policy = nn.Sequential(*layers)
 
   def forward(self, state):
     policy_mean, policy_log_std = self.policy(state).chunk(2, dim=1)
     policy_log_std = torch.clamp(policy_log_std, min=self.log_std_min, max=self.log_std_max)
-    policy = TanhNormal(policy_mean, policy_log_std.exp())
+    policy = TransformedDistribution(Independent(Normal(policy_mean, policy_log_std.exp()), 1), [TanhTransform(), AffineTransform(loc=self.action_loc, scale=self.action_scale)])
+    policy.mean_ = self.action_scale * torch.tanh(policy.base_dist.mean) + self.action_loc  # TODO: See if mean attr can be overwritten
     return policy
 
 
