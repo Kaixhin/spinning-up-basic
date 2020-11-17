@@ -5,6 +5,8 @@ import torch
 class Env():
   def __init__(self):
     self._env = gym.make('Pendulum-v0')
+    self.observation_space = self._env.observation_space
+    self.action_space = self._env.action_space
 
   def reset(self):
     state = self._env.reset()

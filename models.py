@@ -5,9 +5,9 @@ from torch.distributions import Distribution, Independent, Normal
 
 
 class Actor(nn.Module):
-  def __init__(self, hidden_size, stochastic=True, layer_norm=False):
+  def __init__(self, observation_size, action_size, hidden_size, stochastic=True, layer_norm=False):
     super().__init__()
-    layers = [nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 1)]
+    layers = [nn.Linear(observation_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, action_size)]
     if layer_norm:
       layers = layers[:1] + [nn.LayerNorm(hidden_size)] + layers[1:3] + [nn.LayerNorm(hidden_size)] + layers[3:]  # Insert layer normalisation between fully-connected layers and nonlinearities
     self.policy = nn.Sequential(*layers)
@@ -41,10 +41,10 @@ class TanhNormal(Distribution):
 
 
 class SoftActor(nn.Module):
-  def __init__(self, hidden_size):
+  def __init__(self, observation_size, action_size, hidden_size):
     super().__init__()
     self.log_std_min, self.log_std_max = -20, 2  # Constrain range of standard deviations to prevent very deterministic/stochastic policies
-    layers = [nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 2)]
+    layers = [nn.Linear(observation_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 2 * action_size)]
     self.policy = nn.Sequential(*layers)
 
   def forward(self, state):
@@ -55,10 +55,10 @@ class SoftActor(nn.Module):
 
 
 class Critic(nn.Module):
-  def __init__(self, hidden_size, state_action=False, layer_norm=False):
+  def __init__(self, observation_size, action_size, hidden_size, state_action=False, layer_norm=False):
     super().__init__()
     self.state_action = state_action
-    layers = [nn.Linear(3 + (1 if state_action else 0), hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, 1)]
+    layers = [nn.Linear(observation_size + (action_size if state_action else 0), hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, action_size)]
     if layer_norm:
       layers = layers[:1] + [nn.LayerNorm(hidden_size)] + layers[1:3] + [nn.LayerNorm(hidden_size)] + layers[3:]  # Insert layer normalisation between fully-connected layers and nonlinearities
     self.value = nn.Sequential(*layers)
@@ -72,10 +72,10 @@ class Critic(nn.Module):
 
 
 class ActorCritic(nn.Module):
-  def __init__(self, hidden_size):
+  def __init__(self, observation_size, action_size, hidden_size):
     super().__init__()
-    self.actor = Actor(hidden_size, stochastic=True)
-    self.critic = Critic(hidden_size)
+    self.actor = Actor(observation_size, action_size, hidden_size, stochastic=True)
+    self.critic = Critic(observation_size, action_size, hidden_size)
 
   def forward(self, state):
     policy = Independent(Normal(self.actor(state), self.actor.policy_log_std.exp()), 1)
@@ -84,9 +84,9 @@ class ActorCritic(nn.Module):
 
 
 class DQN(nn.Module):
-  def __init__(self, hidden_size, num_actions=5):
+  def __init__(self, observation_size, hidden_size, num_actions=5):
     super().__init__()
-    layers = [nn.Linear(3, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, num_actions)]
+    layers = [nn.Linear(observation_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, num_actions)]
     self.dqn = nn.Sequential(*layers)
 
   def forward(self, state):

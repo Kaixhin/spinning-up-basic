@@ -10,7 +10,7 @@ from utils import plot
 
 
 env = Env()
-agent = DQN(HIDDEN_SIZE, ACTION_DISCRETISATION)
+agent = DQN(env.observation_space.shape[0], HIDDEN_SIZE, ACTION_DISCRETISATION)
 target_agent = create_target_network(agent)
 optimiser = optim.Adam(agent.parameters(), lr=LEARNING_RATE)
 D = deque(maxlen=REPLAY_SIZE)

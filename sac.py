@@ -8,12 +8,11 @@ from env import Env
 from models import Critic, SoftActor, create_target_network, update_target_network
 from utils import plot
 
-
 env = Env()
-actor = SoftActor(HIDDEN_SIZE)
-critic_1 = Critic(HIDDEN_SIZE, state_action=True)
-critic_2 = Critic(HIDDEN_SIZE, state_action=True)
-value_critic = Critic(HIDDEN_SIZE)
+actor = SoftActor(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE)
+critic_1 = Critic(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE, state_action=True)
+critic_2 = Critic(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE, state_action=True)
+value_critic = Critic(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE)
 target_value_critic = create_target_network(value_critic)
 actor_optimiser = optim.Adam(actor.parameters(), lr=LEARNING_RATE)
 critics_optimiser = optim.Adam(list(critic_1.parameters()) + list(critic_2.parameters()), lr=LEARNING_RATE)

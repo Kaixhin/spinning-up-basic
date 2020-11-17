@@ -8,7 +8,7 @@ from utils import plot
 
 
 env = Env()
-agent = ActorCritic(HIDDEN_SIZE)
+agent = ActorCritic(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE)
 actor_optimiser = optim.Adam(agent.actor.parameters(), lr=LEARNING_RATE)
 critic_optimiser = optim.Adam(agent.critic.parameters(), lr=LEARNING_RATE)
 

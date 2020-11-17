@@ -10,8 +10,8 @@ from utils import plot
 
 
 env = Env()
-actor = Actor(HIDDEN_SIZE, stochastic=False, layer_norm=True)
-critic = Critic(HIDDEN_SIZE, state_action=True, layer_norm=True)
+actor = Actor(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE, stochastic=False, layer_norm=True)
+critic = Critic(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE, state_action=True, layer_norm=True)
 target_actor = create_target_network(actor)
 target_critic = create_target_network(critic)
 actor_optimiser = optim.Adam(actor.parameters(), lr=LEARNING_RATE)
