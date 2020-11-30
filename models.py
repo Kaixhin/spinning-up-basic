@@ -6,14 +6,14 @@ from torch.distributions.transforms import AffineTransform, TanhTransform
 
 
 class Actor(nn.Module):
-  def __init__(self, observation_size, action_size, hidden_size, stochastic=True, layer_norm=False):
+  def __init__(self, observation_size, action_size, hidden_size, stochastic=True, layer_norm=False, initial_policy_log_std_dev=-0.):
     super().__init__()
     layers = [nn.Linear(observation_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, action_size)]
     if layer_norm:
       layers = layers[:1] + [nn.LayerNorm(hidden_size)] + layers[1:3] + [nn.LayerNorm(hidden_size)] + layers[3:]  # Insert layer normalisation between fully-connected layers and nonlinearities
     self.policy = nn.Sequential(*layers)
     if stochastic:
-      self.policy_log_std = nn.Parameter(torch.tensor([[0.]]))
+      self.policy_log_std = nn.Parameter(torch.tensor([[initial_policy_log_std_dev]]))
 
   def forward(self, state):
     policy = self.policy(state)
@@ -54,9 +54,9 @@ class Critic(nn.Module):
 
 
 class ActorCritic(nn.Module):
-  def __init__(self, observation_size, action_size, hidden_size):
+  def __init__(self, observation_size, action_size, hidden_size, initial_policy_log_std_dev=-0.):
     super().__init__()
-    self.actor = Actor(observation_size, action_size, hidden_size, stochastic=True)
+    self.actor = Actor(observation_size, action_size, hidden_size, stochastic=True, initial_policy_log_std_dev=initial_policy_log_std_dev)
     self.critic = Critic(observation_size, action_size, hidden_size)
 
   def forward(self, state):

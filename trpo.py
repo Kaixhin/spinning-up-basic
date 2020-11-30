@@ -6,13 +6,13 @@ from torch.distributions.kl import kl_divergence
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from tqdm import tqdm
 from env import Env
-from hyperparams import BACKTRACK_COEFF, BACKTRACK_ITERS, ON_POLICY_BATCH_SIZE as BATCH_SIZE, CONJUGATE_GRADIENT_ITERS, DAMPING_COEFF, DISCOUNT, HIDDEN_SIZE, KL_LIMIT, LEARNING_RATE, MAX_STEPS, TRACE_DECAY
+from hyperparams import BACKTRACK_COEFF, BACKTRACK_ITERS, ON_POLICY_BATCH_SIZE as BATCH_SIZE, CONJUGATE_GRADIENT_ITERS, DAMPING_COEFF, DISCOUNT, HIDDEN_SIZE, INITIAL_POLICY_LOG_STD_DEV, KL_LIMIT, LEARNING_RATE, MAX_STEPS, TRACE_DECAY
 from models import ActorCritic
 from utils import plot
 
 
 env = Env()
-agent = ActorCritic(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE)
+agent = ActorCritic(env.observation_space.shape[0], env.action_space.shape[0], HIDDEN_SIZE, initial_policy_log_std_dev=INITIAL_POLICY_LOG_STD_DEV)
 critic_optimiser = optim.Adam(agent.critic.parameters(), lr=LEARNING_RATE)
 
 
