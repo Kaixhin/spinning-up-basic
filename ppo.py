@@ -2,7 +2,7 @@ import torch
 from torch import optim
 from tqdm import tqdm
 from env import Env
-from hyperparams import ON_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, HIDDEN_SIZE, INITIAL_POLICY_LOG_STD_DEV, LEARNING_RATE, MAX_STEPS, PPO_CLIP_RATIO, PPO_EPOCHS, TRACE_DECAY
+from hyperparams import ON_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, HIDDEN_SIZE, INITIAL_POLICY_LOG_STD_DEV, LEARNING_RATE, MAX_STEPS, PPO_CLIP_RATIO, PPO_EPOCHS, TRACE_DECAY, VALUE_EPOCHS
 from models import ActorCritic
 from utils import plot
 
@@ -60,7 +60,9 @@ for step in pbar:
         actor_optimiser.step()
 
       # Fit value function by regression on mean-squared error
-      value_loss = (trajectories['value'] - trajectories['reward_to_go']).pow(2).mean()
-      critic_optimiser.zero_grad()
-      value_loss.backward()
-      critic_optimiser.step()
+      for _ in range(VALUE_EPOCHS):
+        value_loss = (trajectories['value'] - trajectories['reward_to_go']).pow(2).mean()
+        critic_optimiser.zero_grad()
+        value_loss.backward()
+        critic_optimiser.step()
+        trajectories['value'] = agent(trajectories['state'])[1]

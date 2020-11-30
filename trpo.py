@@ -6,7 +6,7 @@ from torch.distributions.kl import kl_divergence
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from tqdm import tqdm
 from env import Env
-from hyperparams import BACKTRACK_COEFF, BACKTRACK_ITERS, ON_POLICY_BATCH_SIZE as BATCH_SIZE, CONJUGATE_GRADIENT_ITERS, DAMPING_COEFF, DISCOUNT, HIDDEN_SIZE, INITIAL_POLICY_LOG_STD_DEV, KL_LIMIT, LEARNING_RATE, MAX_STEPS, TRACE_DECAY
+from hyperparams import BACKTRACK_COEFF, BACKTRACK_ITERS, ON_POLICY_BATCH_SIZE as BATCH_SIZE, CONJUGATE_GRADIENT_ITERS, DAMPING_COEFF, DISCOUNT, HIDDEN_SIZE, INITIAL_POLICY_LOG_STD_DEV, KL_LIMIT, LEARNING_RATE, MAX_STEPS, TRACE_DECAY, VALUE_EPOCHS
 from models import ActorCritic
 from utils import plot
 
@@ -100,7 +100,9 @@ for step in pbar:
             vector_to_parameters(old_parameters, agent.actor.parameters())
 
       # Fit value function by regression on mean-squared error
-      value_loss = (trajectories['value'] - trajectories['reward_to_go']).pow(2).mean()
-      critic_optimiser.zero_grad()
-      value_loss.backward()
-      critic_optimiser.step()
+      for _ in range(VALUE_EPOCHS):
+        value_loss = (trajectories['value'] - trajectories['reward_to_go']).pow(2).mean()
+        critic_optimiser.zero_grad()
+        value_loss.backward()
+        critic_optimiser.step()
+        trajectories['value'] = agent(trajectories['state'])[1]
