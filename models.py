@@ -6,7 +6,7 @@ from torch.distributions.transforms import AffineTransform, TanhTransform
 
 
 class Actor(nn.Module):
-  def __init__(self, observation_size, action_size, hidden_size, stochastic=True, layer_norm=False, initial_policy_log_std_dev=-0.):
+  def __init__(self, observation_size, action_size, hidden_size, stochastic=True, layer_norm=False, initial_policy_log_std_dev=0.0):
     super().__init__()
     layers = [nn.Linear(observation_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, hidden_size), nn.Tanh(), nn.Linear(hidden_size, action_size)]
     if layer_norm:
@@ -54,7 +54,7 @@ class Critic(nn.Module):
 
 
 class ActorCritic(nn.Module):
-  def __init__(self, observation_size, action_size, hidden_size, initial_policy_log_std_dev=-0.):
+  def __init__(self, observation_size, action_size, hidden_size, initial_policy_log_std_dev=0.0):
     super().__init__()
     self.actor = Actor(observation_size, action_size, hidden_size, stochastic=True, initial_policy_log_std_dev=initial_policy_log_std_dev)
     self.critic = Critic(observation_size, action_size, hidden_size)
