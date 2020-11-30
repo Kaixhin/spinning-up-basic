@@ -56,7 +56,7 @@ for step in pbar:
     if len(D) >= BATCH_SIZE:
       # Compute rewards-to-go R and advantage estimates based on the current value function V
       with torch.no_grad():
-        reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])
+        reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])  # No bootstrapping needed for next value here as only updated at end of an episode
         for transition in reversed(D):
           reward_to_go = transition['reward'] + (1 - transition['done']) * (DISCOUNT * reward_to_go)
           transition['reward_to_go'] = reward_to_go
