@@ -16,6 +16,10 @@ For MPI versions of on-policy algorithms, see the [`mpi` branch](https://github.
 - [Soft Actor-Critic](https://spinningup.openai.com/en/latest/algorithms/sac.html) (`sac.py`)
 - Deep Q-Network (`dqn.py`)
 
+## Implementation Details
+
+Note that implementation details can have a significant effect on performance, as discussed in [What Matters In On-Policy Reinforcement Learning? A Large-Scale Empirical Study](https://arxiv.org/abs/2006.05990). This codebase attempts to be as simple as possible, but note that for instance on-policy algorithms use separate actor and critic networks, a state-independent policy standard deviation, per-minibatch advantage normalisation, and several critic updates per minibatch, while the deterministic off-policy algorithms use layer normalisation. Equally, soft actor-critic uses a transformed Normal distribution by default, but this can also help the on-policy algorithms.
+
 ## Results
 
 ### Vanilla Policy Gradient/Advantage Actor-Critic
