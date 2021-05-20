@@ -31,7 +31,7 @@ class SoftActor(nn.Module):
   def forward(self, state):
     policy_mean, policy_log_std = self.policy(state).chunk(2, dim=1)
     policy_log_std = torch.clamp(policy_log_std, min=self.log_std_min, max=self.log_std_max)
-    policy = TransformedDistribution(Independent(Normal(policy_mean, policy_log_std.exp()), 1), [TanhTransform(), AffineTransform(loc=self.action_loc, scale=self.action_scale)])
+    policy = TransformedDistribution(Independent(Normal(policy_mean, policy_log_std.exp()), 1), [TanhTransform(cache_size=1), AffineTransform(loc=self.action_loc, scale=self.action_scale)])
     policy.mean_ = self.action_scale * torch.tanh(policy.base_dist.mean) + self.action_loc  # TODO: See if mean attr can be overwritten
     return policy
 
